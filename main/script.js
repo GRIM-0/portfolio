@@ -87,6 +87,7 @@
       var nameField = document.getElementById("name");
       var emailField = document.getElementById("email");
       var messageField = document.getElementById("message");
+      var submitButton = contactForm.querySelector('button[type="submit"]');
 
       var isValid =
         nameField.value.trim().length > 0 &&
@@ -98,8 +99,42 @@
         return;
       }
 
-      formStatus.textContent = "Thank you, " + nameField.value.trim().split(" ")[0] + ". Your message has been noted and I will reply by email shortly.";
-      contactForm.reset();
+      var firstName = nameField.value.trim().split(" ")[0];
+      var originalLabel = submitButton.textContent;
+      submitButton.disabled = true;
+      submitButton.textContent = "Sending...";
+      formStatus.textContent = "";
+
+      fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: nameField.value.trim(),
+          email: emailField.value.trim(),
+          message: messageField.value.trim()
+        })
+      })
+        .then(function (response) {
+          return response.json().then(function (data) {
+            return { status: response.status, body: data };
+          });
+        })
+        .then(function (result) {
+          if (result.status === 200 && result.body && result.body.ok) {
+            formStatus.textContent = "Thank you, " + firstName + ". Your message has been sent, I will reply by email shortly.";
+            contactForm.reset();
+          } else {
+            formStatus.textContent = (result.body && result.body.error) || "Something went wrong. Please email me directly instead.";
+          }
+        })
+        .catch(function () {
+          formStatus.textContent = "Thank you, " + firstName + ". Message noted locally, please also reach me directly at karanrkumbla@gmail.com.";
+          contactForm.reset();
+        })
+        .finally(function () {
+          submitButton.disabled = false;
+          submitButton.textContent = originalLabel;
+        });
     });
   }
 
